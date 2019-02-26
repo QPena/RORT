@@ -23,8 +23,8 @@ function problem_2(inst::Data)
 
 	solve(s1)
 	print("initialisation de Y")
-	println(getvalue(x))
-	println(getobjectivevalue(s1))
+	#println(getvalue(x))
+	#println(getobjectivevalue(s1))
 	Y0=[]
 	X0=getvalue(x)
 	for (i,j) in arks
@@ -97,6 +97,7 @@ function problem_2(inst::Data)
 	                print((i,j))
 	            end
 	        end
+	        return Z
 			break
 				
 		end
