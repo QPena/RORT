@@ -1,4 +1,4 @@
-include("sujet/instances_io.jl")
+include("instances_io.jl")
 
 using JuMP
 using Cbc
