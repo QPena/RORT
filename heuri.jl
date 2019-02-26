@@ -3,7 +3,16 @@ include("instances_io.jl")
 using JuMP
 using GLPKMathProgInterface
 
-function heuri!(inst::Data)
+
+# Modes : * 1 = random
+#         * 2 = Plus grande distance
+#         * 3 = Plus grande pénalité
+#         * 4 = Plus grande distance + pénalité
+#         * 5 = Plus petite distance
+#         * 6 = Plus petite pénalité
+#         * 7 = Plus petite distance + pénalité
+
+function heuri!(inst::Data, mode::Int)
     A_star = []
     obj = -1
     while length(A_star) <= inst.k
@@ -29,20 +38,40 @@ function heuri!(inst::Data)
                     push!(sature, (u,v))
                 end
             end
+            if mode == 1
             ### Choose random ark
-            #(u,v) = sature[rand(1:length(sature))]
+                (u,v) = sature[rand(1:length(sature))]
             
+            elseif mode == 2
             ### Choose highest c
-            #sort!(sature, by=x->-inst.c[x[1]][x[2]]) # tri dans l'ordre croissant
-            #(u,v) = sature[1]
+                sort!(sature, by=x->-inst.c[x[1]][x[2]]) # tri dans l'ordre croissant
+                (u,v) = sature[1]
 
+            elseif mode == 3
             ### Choose highest d
-            sort!(sature, by=x->-inst.d[x[1]][x[2]]) # tri dans l'ordre croissant
-            (u,v) = sature[1]
+                sort!(sature, by=x->-inst.d[x[1]][x[2]]) # tri dans l'ordre croissant
+                (u,v) = sature[1]
 
+            elseif mode == 4
             ### Choose lowest c+d
-            #sort!(sature, by=x->inst.c[x[1]][x[2]] + inst.d[x[1]][x[2]]) # tri dans l'ordre croissant
-            #(u,v) = sature[1]
+                sort!(sature, by=x->-(inst.c[x[1]][x[2]] + inst.d[x[1]][x[2]])) # tri dans l'ordre croissant
+                (u,v) = sature[1]
+
+            elseif mode == 5
+            ### Choose lowest c
+                sort!(sature, by=x->inst.c[x[1]][x[2]]) # tri dans l'ordre croissant
+                (u,v) = sature[1]
+
+            elseif mode == 6
+            ### Choose lowest d
+                sort!(sature, by=x->inst.d[x[1]][x[2]]) # tri dans l'ordre croissant
+                (u,v) = sature[1]
+
+            elseif mode == 7
+            ### Choose lowest c + d
+                sort!(sature, by=x->inst.c[x[1]][x[2]] + inst.d[x[1]][x[2]]) # tri dans l'ordre croissant
+                (u,v) = sature[1]
+            end
 
             push!(A_star, (u,v))
             #println(u, ",", v)
