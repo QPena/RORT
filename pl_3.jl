@@ -131,5 +131,5 @@ function master(graph::Data)
     end
     push!(Y, get_path(slave_path, graph.n))
   end
-  print("Final solution is ", get_x(longest_x, graph.n))
+  print("Final solution is ", get_x(longest_x, graph.n), " with value ", longest_path_length)
 end
