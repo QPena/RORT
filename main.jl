@@ -27,7 +27,7 @@ function main(pl1=false, pl2=false, pl3=false, heuri=false, filetemplate = "", m
 			end
 
 			if heuri
-				print("Heuristique : ")
+				println("Heuristique : ")
 				for mode in modes
 					inst = generate(workingdir * "\\" * file)
 					@time heursol = heuri!(inst, mode)

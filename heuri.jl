@@ -15,11 +15,10 @@ using GLPKMathProgInterface
 function heuri!(inst::Data, mode::Int)
     A_star = []
     obj = -1
+    arks = [(i,j) for i in 1:inst.n for j in 1:inst.n if inst.adj[i][j]]
     while length(A_star) <= inst.k
         #println("\n Itération ", length(A_star))
         m = Model(solver=GLPKSolverMIP())
-
-        arks = [(i,j) for i in 1:inst.n for j in 1:inst.n if inst.adj[i][j]]
 
         @variable(m, y[(i,j) in arks] >= 0)
         @variable(m, z >= 0)
@@ -82,6 +81,24 @@ function heuri!(inst::Data, mode::Int)
             break
         end
     end
+
+
+    s1 = Model(solver=GLPKSolverMIP())
+
+    @variable(s1, x[(i,j) in arks], Bin)
+
+    @constraint(s1, depart,sum(x[(1,j)] for j in 1:inst.n if (1,j) in arks) == 1)
+    @constraint(s1, arrivee,sum(x[(i,inst.n)] for i in 1:inst.n if (i,inst.n) in arks) == 1)
+    @constraint(s1, flot[v in 2:inst.n-1], sum(x[(i,v)] for i in 1:inst.n if (i,v) in arks) - sum(x[(v,j)] for j in 1:inst.n if (v,j) in arks) == 0)
+
+
+    @objective(s1, Min, sum(inst.c[i][j]*x[(i,j)] for (i,j) in arks))
+
+    solve(s1)
+
+    println("Borne inf : ", getobjectivevalue(s1))
+    println("Borne sup : ", obj)
+    println("Gap :       ", 100*(obj - getobjectivevalue(s1))/obj, "%")
 
     return obj
 
