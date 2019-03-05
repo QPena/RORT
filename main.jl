@@ -41,8 +41,16 @@ end
 
 
 function generate_instances(l,c,k,maxc,maxd, N)
+	shift = 0
+	print_maxd = maxd>0 ? string(maxd) : "inf"
 	for i = 1:N
-		generate(l,c,k,maxc,maxd,"C:\\Users\\penaq\\Desktop\\MPRO\\RORT\\Instances\\" * string(l) * "_" * string(c) * "_" * string(k) * "_" * string(maxc) * "_" *string(maxd)*"_"*string(i)*".dat")
+		filename = string(l) * "_" * string(c) * "_" * string(k) * "_" * string(maxc) * "_" *print_maxd*"_"*string(i+shift)*".dat"
+		while filename in readdir(workingdir)
+			shift += 1
+			filename = string(l) * "_" * string(c) * "_" * string(k) * "_" * string(maxc) * "_" *print_maxd*"_"*string(i+shift)*".dat"
+		end
+		generate(l,c,k,maxc,maxd,"C:\\Users\\penaq\\Desktop\\MPRO\\RORT\\Instances\\" * filename )
+		println("Generated ", filename)
 	end
 end
 # pb3 : 157 en 6s
