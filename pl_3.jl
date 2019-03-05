@@ -26,7 +26,7 @@ function shortest_path(graph::Data, x, arks)
   @constraint(m, sum(y[(u,v)] for (u,v) in arks if v == graph.n) == 1)
   @constraint(m, sum(y[(u,v)] for (u,v) in arks if u == graph.n) == 0)
 
-  @constraint(m, cons[u in 2:(graph.n-1)], sum(y[(u,w)] for w in 1:graph.n if (u,w) in arks) - sum(y[(w,u)] for w in 1:graph.n if (w,u) in arks)== 0)
+  @constraint(m, [u in 2:(graph.n-1)], sum(y[(u,w)] for w in 1:graph.n if (u,w) in arks) - sum(y[(w,u)] for w in 1:graph.n if (w,u) in arks)== 0)
 
   @constraint(m, xory[(u,v) in arks],  x[(u,v)] + y[(u,v)] <= 1)
 
@@ -50,17 +50,27 @@ function get_path(y, n, arks)
   path = [1]
   node = 1
   Y = []
+  c = 0
   print("Path is : ")
-  while node != n
+  while node != n && c < n+1
+    prev_node = node
     for (u,v) in arks
       if u == node && getvalue(y[(u,v)]) == 1
         push!(path, u)
 	push!(Y, (u,v))
 	print(" ", node, " ")
 	node = v
+	c = c + 1
 	break
       end
     end
+    if node == prev_node
+      print("ALERTE : node is its own predecessor : ", node, " in path ", getvalue(y))
+      return
+    end
+  end
+  if c == n+1
+    print("ERROR : Path is not feasible : ", getvalue(y))
   end
   return Y
 end
@@ -150,8 +160,8 @@ function master(graph::Data)
       longest_path_length = getobjectivevalue(model)
     end
     # push!(Y, get_path(slave_path, graph.n, arks))
-    Y_path = get_path(slave_path, graph.n, arks)
-    @constraint(m, sum(x[(u, v)] for (u,v) in Y_path) >= 1)
+    # Y_path = get_path(slave_path, graph.n, arks)
+    @constraint(m, sum(x[(u, v)] for (u,v) in arks if getvalue(slave_path[(u,v)]) == 1) >= 1)
   end
   print("Final solution is ", get_x_from_value(longest_x, graph.n, arks), " with value ", longest_path_length)
 end
