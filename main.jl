@@ -19,6 +19,7 @@ function main(pl1=false, pl2=false, pl3=false, heuri=false, filetemplate = "", m
 			if pl2
 				print("PL 2 : ")
 				@time pb2 = problem_2(inst)
+				println(pb2)
 			end
 
 			if pl3
@@ -28,11 +29,16 @@ function main(pl1=false, pl2=false, pl3=false, heuri=false, filetemplate = "", m
 
 			if heuri
 				println("Heuristique : ")
-				for mode in modes
-					inst = generate(workingdir * "\\" * file)
-					@time heursol = heuri!(inst, mode)
-					println("Mode ", mode, " : ", heursol)
-				end
+				inst = generate(workingdir * "\\" * file)
+				@time inf, sup = heuristicSolve!(inst)
+				println("Globale borne inf : ", inf)
+				println("Globale borne sup : ", sup)
+				println("Best gap          : ", 100*(sup-inf)/sup, "%")
+				#for mode in modes
+				#	inst = generate(workingdir * "\\" * file)
+				#	@time heursol = heuri!(inst, mode)
+				#	println("Mode ", mode, " : ", heursol)
+				#end
 			end
 		end
 	end
