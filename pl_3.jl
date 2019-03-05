@@ -17,23 +17,23 @@ Mais plutôt Pkg.add('GLPKMathProgInterface') (double quote)
 On calcule le plus coourt chemin de s ) t ne passant pas par les arcs uv tels que xuv = 1
 On note ici un chemin y indicé par les arêtes ; liste d'arêtes ? Ou matrice booléenne de même taille que adj (homomorphe) ?
 """ ->
-function shortest_path(graph::Data, x::Array{Array{Bool,1},1})
+function shortest_path(graph::Data, x, arks)
   m = Model(solver=CbcSolver())
-  @variable(m, y[u in 1:graph.n, v in 1:graph.n], Bin)
+  @variable(m, y[(u,v) in arks], Bin)
 
-  @constraint(m, sum(graph.adj[1][v]*y[1,v] for v in 1:graph.n) == 1)
-  @constraint(m, sum(graph.adj[v][1]*y[v,1] for v in 1:graph.n) == 0)
-  @constraint(m, sum(graph.adj[v][graph.n]*y[v,graph.n] for v in 1:graph.n) == 1)
-  @constraint(m, sum(graph.adj[graph.n][v]*y[graph.n,v] for v in 1:graph.n) == 0)
+  @constraint(m, sum(y[(u,v)] for (u,v) in arks if u == 1) == 1)
+  @constraint(m, sum(y[(u,v)] for (u,v) in arks if v == 1) == 0)
+  @constraint(m, sum(y[(u,v)] for (u,v) in arks if v == graph.n) == 1)
+  @constraint(m, sum(y[(u,v)] for (u,v) in arks if u == graph.n) == 0)
 
-  @constraint(m, cons[u in 2:(graph.n-1)], sum(graph.adj[u][w]*y[u,w] - graph.adj[w][u]*y[w,u] for w in 1:graph.n) == 0)
+  @constraint(m, cons[u in 2:(graph.n-1)], sum(y[(u,w)] for w in 1:graph.n if (u,w) in arks) - sum(y[(w,u)] for w in 1:graph.n if (w,u) in arks)== 0)
 
-  @constraint(m, xory[u = 1:graph.n, v = 1:graph.n],  x[u][v] + y[u,v] <= graph.adj[u][v])
+  @constraint(m, xory[(u,v) in arks],  x[(u,v)] + y[(u,v)] <= 1)
 
-  @objective(m, Min, sum(graph.adj[u][v]*y[u,v]*graph.c[u][v] for u in 1:graph.n for v in 1:graph.n))
+  @objective(m, Min, sum(y[(u,v)]*graph.c[u][v] for (u,v) in arks))
 
   status = solve(m, relaxation=false)
-  return m, status, y
+  return m, y
 end
 
 
@@ -46,18 +46,18 @@ end
 @doc """
 A partir de la variable y et de la taille n, renvoie la liste des noeuds du chemin contenu dans y
 """ ->
-function get_path(y, n)
+function get_path(y, n, arks)
   path = [1]
   node = 1
   Y = []
   print("Path is : ")
   while node != n
-    for i in 1:n
-      if getvalue(y[node,i]) == 1
-        push!(path, i)
-	push!(Y, (node,i))
+    for (u,v) in arks
+      if u == node && getvalue(y[(u,v)]) == 1
+        push!(path, u)
+	push!(Y, (u,v))
 	print(" ", node, " ")
-	node = i
+	node = v
 	break
       end
     end
@@ -66,18 +66,25 @@ function get_path(y, n)
 end
 
 
-function get_x(x, n)
+function get_x(x, n, arks)
   final_x = []
-  for u in 1:n
-    for v in 1:n
-      if getvalue(x[u, v]) == 1
-        push!(final_x, (u,v))
-      end
+  for (u,v) in arks
+    if getvalue(x[(u, v)]) == 1
+      push!(final_x, (u,v))
     end
   end
   return final_x
 end
 
+function get_x_from_value(x, n, arks)
+  final_x = []
+  for (u,v) in arks
+    if x[(u, v)] == 1
+      push!(final_x, (u,v))
+    end
+  end
+  return final_x
+end
 
 
 
@@ -88,48 +95,63 @@ Fonction chapeau : résout le problème master, appelle les sous problèmes
 """ ->
 function master(graph::Data)
   # Hyp faite : duv = infini
-  Y = []
+  #Y = []
+  arks = [(i,j) for i in 1:graph.n for j in 1:graph.n if graph.adj[i][j]]
   longest_path_length = -Inf
   x0 = [[false for i in 1:graph.n] for j in 1:graph.n]
-  m_0, status, y = shortest_path(graph, x0)
+  m_0, y = shortest_path(graph, x0, arks)
+  status = solve(m_0, relaxation=false)
   longest_x = x0
   if status != :Optimal
     println("Error : first path not found :")
     return
   end
-  path = get_path(y, graph.n)
-  push!(Y, path)
+  Y_path = get_path(y, graph.n, arks)
+  #push!(Y, path)
+
+  m = Model(solver=CbcSolver())
+  @variable(m, x[(u,v) in arks], Bin)
+  @constraint(m, sum(x[(u, v)] for (u,v) in Y_path) >= 1)
+  @constraint(m, sum(x[(u, v)] for (u,v) in arks) <= graph.k)
+  @constraint(m, xoradj[(u,v) in arks], x[(u, v)] <= graph.adj[u][v])
+
   println("Initialization done.")
   while status == :Optimal
     println("Solving master...")
-    m = Model(solver=CbcSolver())
-
-    @variable(m, x[1:graph.n, 1:graph.n], Bin)
-
-    @constraint(m, cons[path in Y], sum(x[u, v] for (u,v) in path) >= 1)
-    @constraint(m, sum(x[u, v] for u in 1:graph.n for v in 1:graph.n) <= graph.k)
-    @constraint(m, xoradj[u in 1:graph.n, v in 1:graph.n], x[u, v] <= graph.adj[u][v])
+    # m = Model(solver=CbcSolver())
+    # @variable(m, x[(u,v) in arks], Bin)
+    # @constraint(m, cons[path in Y], sum(x[(u, v)] for (u,v) in Y_path) >= 1)
+    # @constraint(m, sum(x[(u, v)] for (u,v) in arks) <= graph.k)
+    # @constraint(m, xoradj[(u,v) in arks], x[(u, v)] <= graph.adj[u][v])
 
     status = solve(m, relaxation=false)
     if status != :Optimal
       println("Master problem unfeasible")
       break
     end
-    x_val = [[getvalue(x[u, v]) == 1.0 for v in 1:graph.n] for u in 1:graph.n]
-    println("Master solved with status ", status)
+    x_val = getvalue(x) # [getvalue(x[(u, v)]) == 1.0 for (u,v) in arks]
+    println("Master solved with status ", status, " and x = ", get_x(x, graph.n, arks))
 
 
     println("Solving slave...")
-    model, slave_status, slave_path =  shortest_path(graph, x_val)
+    @constraint(m_0, [(u,v) in arks],  getvalue(x[(u,v)]) + y[(u,v)] <= 1)
+
+    model, slave_path =  shortest_path(graph, x_val, arks)
+    # model = m_0
+    # slave_path = y
+    slave_status = solve(model, relaxation=false)
+    
     if slave_status != :Optimal
       println("Error : sub problem is unfeasible for x = ", x_val)
       break
     end
     if getobjectivevalue(model) > longest_path_length
-      longest_x = x
+      longest_x = getvalue(x)
       longest_path_length = getobjectivevalue(model)
     end
-    push!(Y, get_path(slave_path, graph.n))
+    # push!(Y, get_path(slave_path, graph.n, arks))
+    Y_path = get_path(slave_path, graph.n, arks)
+    @constraint(m, sum(x[(u, v)] for (u,v) in Y_path) >= 1)
   end
-  print("Final solution is ", get_x(longest_x, graph.n), " with value ", longest_path_length)
+  print("Final solution is ", get_x_from_value(longest_x, graph.n, arks), " with value ", longest_path_length)
 end
