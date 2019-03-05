@@ -98,7 +98,7 @@ function master(graph::Data)
   #Y = []
   arks = [(i,j) for i in 1:graph.n for j in 1:graph.n if graph.adj[i][j]]
   longest_path_length = -Inf
-  x0 = [[false for i in 1:graph.n] for j in 1:graph.n]
+  x0 = Dict((i,j) => false for (i,j) in arks)
   m_0, y = shortest_path(graph, x0, arks)
   status = solve(m_0, relaxation=false)
   longest_x = x0
