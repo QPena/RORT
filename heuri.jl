@@ -3,7 +3,6 @@ include("instances_io.jl")
 using JuMP
 using GLPKMathProgInterface
 
-
 # Modes : * 1 = random
 #         * 2 = Plus grande distance
 #         * 3 = Plus grande pénalité
@@ -11,6 +10,20 @@ using GLPKMathProgInterface
 #         * 5 = Plus petite distance
 #         * 6 = Plus petite pénalité
 #         * 7 = Plus petite distance + pénalité
+modes = [1,2,3,4,5,6,7]
+
+
+function heuristicSolve!(inst::Data)
+    inf = 0
+    sup = Inf
+    for mode in modes
+        m_inst = deepcopy(inst)
+        m_inf, m_sup = heuri!(m_inst, mode)
+        inf = max(inf, m_inf)
+        sup = min(sup, m_sup)
+    end
+    return inf, sup
+end
 
 function heuri!(inst::Data, mode::Int)
     A_star = []
@@ -52,7 +65,7 @@ function heuri!(inst::Data, mode::Int)
                 (u,v) = sature[1]
 
             elseif mode == 4
-            ### Choose lowest c+d
+            ### Choose highest c+d
                 sort!(sature, by=x->-(inst.c[x[1]][x[2]] + inst.d[x[1]][x[2]])) # tri dans l'ordre croissant
                 (u,v) = sature[1]
 
@@ -96,10 +109,12 @@ function heuri!(inst::Data, mode::Int)
 
     solve(s1)
 
-    println("Borne inf : ", getobjectivevalue(s1))
-    println("Borne sup : ", obj)
-    println("Gap :       ", 100*(obj - getobjectivevalue(s1))/obj, "%")
+    inf = getobjectivevalue(s1)
 
-    return obj
+    #println("Borne inf : ", inf)
+    #println("Borne sup : ", obj)
+    #println("Gap :       ", 100*(obj - getobjectivevalue(s1))/obj, "%")
+
+    return inf, obj
 
 end

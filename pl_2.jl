@@ -22,7 +22,7 @@ function problem_2(inst::Data)
 	@objective(s1, Min, sum(inst.c[i][j]*x[(i,j)] for (i,j) in arks))
 
 	solve(s1)
-	print("initialisation de Y")
+	#print("initialisation de Y")
 	#println(getvalue(x))
 	#println(getobjectivevalue(s1))
 	Y0=[]
@@ -60,8 +60,8 @@ function problem_2(inst::Data)
 		solve(m)
 		X=getvalue(y)
 		Z=getobjectivevalue(m)
-		println("résolution problème maître")
-		println("Z= ",Z)
+		#println("résolution problème maître")
+		#println("Z= ",Z)
 
 		
 	    
@@ -69,10 +69,10 @@ function problem_2(inst::Data)
 
 		solve(s1)
 		valeur=getobjectivevalue(s1)
-	    println("valeur problème esclave= ",valeur)
+	    #println("valeur problème esclave= ",valeur)
 
 
-		println("résolution problème esclave")
+		#println("résolution problème esclave")
 
 		if valeur < Z
 			Yi=[]
@@ -84,17 +84,17 @@ function problem_2(inst::Data)
 
 			end
 	        push!(Y,Yi)
-	 #       println("Yi= ",Yi)
+	 #       #println("Yi= ",Yi)
 
 			K+=1
-			println("itération ",K)
+			#println("itération ",K)
 	#        println(Y[K])
 		else 
-			println("z= ",Z)
-	        println("arcs pénalisés")
+			#println("z= ",Z)
+	        #println("arcs pénalisés")
 	        for (i,j) in arks
 	            if X[(i,j)]==1
-	                print((i,j))
+	                #print((i,j))
 	            end
 	        end
 	        return Z
