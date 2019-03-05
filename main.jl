@@ -25,14 +25,14 @@ function main(pl1=false, pl2=false, pl3=false, heuri=false, filetemplate = "", m
 			if pl3
 				print("PL 3 : ")
 				@time pb3 = master(inst);
+				println(pb3)
 			end
 
 			if heuri
 				println("Heuristique : ")
-				inst = generate(workingdir * "\\" * file)
-				@time inf, sup = heuristicSolve!(inst)
-				println("Globale borne inf : ", inf)
-				println("Globale borne sup : ", sup)
+				@time inf, sup, minf, msup = heuristicSolve!(workingdir * "\\" * file)
+				println("Globale borne inf : ", inf, " (mode ", minf, ")")
+				println("Globale borne sup : ", sup, " (mode ", msup, ")")
 				println("Best gap          : ", 100*(sup-inf)/sup, "%")
 				#for mode in modes
 				#	inst = generate(workingdir * "\\" * file)

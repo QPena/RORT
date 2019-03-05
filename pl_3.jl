@@ -1,7 +1,7 @@
 include("instances_io.jl")
 
 using JuMP
-using Cbc
+using GLPKMathProgInterface
 @doc """
 Troisème problème
 
@@ -18,7 +18,7 @@ On calcule le plus coourt chemin de s ) t ne passant pas par les arcs uv tels qu
 On note ici un chemin y indicé par les arêtes ; liste d'arêtes ? Ou matrice booléenne de même taille que adj (homomorphe) ?
 """ ->
 function shortest_path(graph::Data, x, arks)
-  m = Model(solver=CbcSolver())
+  m = Model(solver=GLPKSolverMIP())
   @variable(m, y[(u,v) in arks], Bin)
 
   @constraint(m, sum(y[(u,v)] for (u,v) in arks if u == 1) == 1)
@@ -51,26 +51,26 @@ function get_path(y, n, arks)
   node = 1
   Y = []
   c = 0
-  print("Path is : ")
+  #print("Path is : ")
   while node != n && c < n+1
     prev_node = node
     for (u,v) in arks
       if u == node && getvalue(y[(u,v)]) == 1
         push!(path, u)
 	push!(Y, (u,v))
-	print(" ", node, " ")
+	#print(" ", node, " ")
 	node = v
 	c = c + 1
 	break
       end
     end
     if node == prev_node
-      print("ALERTE : node is its own predecessor : ", node, " in path ", getvalue(y))
+      #print("ALERTE : node is its own predecessor : ", node, " in path ", getvalue(y))
       return
     end
   end
   if c == n+1
-    print("ERROR : Path is not feasible : ", getvalue(y))
+    #print("ERROR : Path is not feasible : ", getvalue(y))
   end
   return Y
 end
@@ -104,6 +104,7 @@ end
 Fonction chapeau : résout le problème master, appelle les sous problèmes
 """ ->
 function master(graph::Data)
+
   # Hyp faite : duv = infini
   #Y = []
   arks = [(i,j) for i in 1:graph.n for j in 1:graph.n if graph.adj[i][j]]
@@ -113,46 +114,50 @@ function master(graph::Data)
   status = solve(m_0, relaxation=false)
   longest_x = x0
   if status != :Optimal
-    println("Error : first path not found :")
+    #println("Error : first path not found :")
     return
   end
   Y_path = get_path(y, graph.n, arks)
   #push!(Y, path)
 
-  m = Model(solver=CbcSolver())
+  m = Model(solver=GLPKSolverMIP())
   @variable(m, x[(u,v) in arks], Bin)
   @constraint(m, sum(x[(u, v)] for (u,v) in Y_path) >= 1)
   @constraint(m, sum(x[(u, v)] for (u,v) in arks) <= graph.k)
   @constraint(m, xoradj[(u,v) in arks], x[(u, v)] <= graph.adj[u][v])
 
-  println("Initialization done.")
+  #println("Initialization done.")
   while status == :Optimal
-    println("Solving master...")
+    #println("Solving master...")
     # m = Model(solver=CbcSolver())
     # @variable(m, x[(u,v) in arks], Bin)
     # @constraint(m, cons[path in Y], sum(x[(u, v)] for (u,v) in Y_path) >= 1)
     # @constraint(m, sum(x[(u, v)] for (u,v) in arks) <= graph.k)
     # @constraint(m, xoradj[(u,v) in arks], x[(u, v)] <= graph.adj[u][v])
 
+
     status = solve(m, relaxation=false)
+
+
     if status != :Optimal
-      println("Master problem unfeasible")
+      #println("Master problem unfeasible")
       break
     end
     x_val = getvalue(x) # [getvalue(x[(u, v)]) == 1.0 for (u,v) in arks]
-    println("Master solved with status ", status, " and x = ", get_x(x, graph.n, arks))
+    #println("Master solved with status ", status, " and x = ", get_x(x, graph.n, arks))
 
 
-    println("Solving slave...")
+    #println("Solving slave...")
     @constraint(m_0, [(u,v) in arks],  getvalue(x[(u,v)]) + y[(u,v)] <= 1)
 
     model, slave_path =  shortest_path(graph, x_val, arks)
     # model = m_0
     # slave_path = y
+
     slave_status = solve(model, relaxation=false)
-    
+
     if slave_status != :Optimal
-      println("Error : sub problem is unfeasible for x = ", x_val)
+      #println("Error : sub problem is unfeasible for x = ", x_val)
       break
     end
     if getobjectivevalue(model) > longest_path_length
@@ -163,5 +168,6 @@ function master(graph::Data)
     # Y_path = get_path(slave_path, graph.n, arks)
     @constraint(m, sum(x[(u, v)] for (u,v) in arks if getvalue(slave_path[(u,v)]) == 1) >= 1)
   end
-  print("Final solution is ", get_x_from_value(longest_x, graph.n, arks), " with value ", longest_path_length)
+  #print("Final solution is ", get_x_from_value(longest_x, graph.n, arks), " with value ", longest_path_length)
+  return longest_path_length
 end

@@ -13,16 +13,24 @@ using GLPKMathProgInterface
 modes = [1,2,3,4,5,6,7]
 
 
-function heuristicSolve!(inst::Data)
+function heuristicSolve!(file)
     inf = 0
     sup = Inf
+    best_inf = -1
+    best_sup = -1
     for mode in modes
-        m_inst = deepcopy(inst)
-        m_inf, m_sup = heuri!(m_inst, mode)
+        inst = generate(file)
+        m_inf, m_sup = heuri!(inst, mode)
         inf = max(inf, m_inf)
+        if inf == m_inf
+            best_inf = mode
+        end
         sup = min(sup, m_sup)
+        if sup == m_sup
+            best_sup = mode
+        end
     end
-    return inf, sup
+    return inf, sup, best_inf, best_sup
 end
 
 function heuri!(inst::Data, mode::Int)
