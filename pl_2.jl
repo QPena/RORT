@@ -22,9 +22,7 @@ function problem_2(inst::Data)
 	@objective(s1, Min, sum(inst.c[i][j]*x[(i,j)] for (i,j) in arks))
 
 	solve(s1)
-	#print("initialisation de Y")
-	#println(getvalue(x))
-	#println(getobjectivevalue(s1))
+
 	Y0=[]
 	X0=getvalue(x)
 	for (i,j) in arks
@@ -32,13 +30,18 @@ function problem_2(inst::Data)
 			push!(Y0,(i,j))
 		end
 	end
+	#on rajoute le pcc calculé dans Y
 	push!(Y,Y0)
 
+	#initialisation de la valeur du problême maître
 	Z=1000
+	#initialisation de la valeur du plus court chemin calculée par le problême esclave
 	valeur=0
-	K=1
+	#initialisation du nombre de coupes
+	K=0
 	X=[]
 
+	#initialisation du problême maître
 	m = Model(solver=GLPKSolverMIP())
 		
 	@variable(m, y[(i,j) in arks], Bin)
@@ -49,30 +52,23 @@ function problem_2(inst::Data)
 	@objective(m, Max, z)
 
 	while Z>valeur
-
+	#tant que la valeur du problême maître est strictement supérieure à la valeur du plus court chemin, la boucle continue
 	#problème maître
 		
+		#mise à jour du problême maître par le rajout de la coupe calculée lors de la dernière itération
 	    @constraint(m ,sum(inst.c[i][j] + inst.d[i][j]*y[(i,j)] for (i,j) in Y[K]) - z >= 0)
 
-
-		
-
+	    #On résout le problême maître
 		solve(m)
 		X=getvalue(y)
+		#mise à jour de Z
 		Z=getobjectivevalue(m)
-		#println("résolution problème maître")
-		#println("Z= ",Z)
 
-		
-	    
+		#mise à jour du problême esclave avec les arcs pénalisés par le problême maître
 		@objective(s1, Min, sum((inst.c[i][j] + inst.d[i][j]*X[(i,j)])*x[(i,j)] for (i,j) in arks))
-
+		#On résout le problême esclave
 		solve(s1)
 		valeur=getobjectivevalue(s1)
-	    #println("valeur problème esclave= ",valeur)
-
-
-		#println("résolution problème esclave")
 
 		if valeur < Z
 			Yi=[]
@@ -84,19 +80,13 @@ function problem_2(inst::Data)
 
 			end
 	        push!(Y,Yi)
-	 #       #println("Yi= ",Yi)
-
+	 #on rajoute le plus court chemin calculé par le problême maître dans Y
+	 		#K=nombre de coupes
 			K+=1
-			#println("itération ",K)
-	#        println(Y[K])
+
 		else 
-			#println("z= ",Z)
-	        #println("arcs pénalisés")
-	        for (i,j) in arks
-	            if X[(i,j)]==1
-	                #print((i,j))
-	            end
-	        end
+		#le problême est résolu
+	        #on retourne la valeur du problème
 	        return Z
 			break
 				
