@@ -16,7 +16,7 @@ modes = [1,2,3,4,5,6,7]
 @doc """
 Fonction chapeau : résout le problème contenu dans le fichier file avec les différentes heuristiques de choix
 """ ->
-function heuristicSolve!(file)
+function heuristicSolve(file)
     inf = 0 # meilleure borne inférieure
     sup = Inf # meilleure borne supérieure
     best_inf = -1 # mode qui donne la meilleure borne inférieure
@@ -25,6 +25,7 @@ function heuristicSolve!(file)
     for mode in modes
         # On lit l'instance que l'on veut résoudre
         # Note : on la re-génère à chaque fois, car la fonction de résolution modifie l'instance
+        # On pourrait aussi effectuer une deepcopy de l'instance initiale (mais pas sûr que ce soit plus rapide)
         inst = generate(file)
         # On résout l'instance avec le mode sélectionné
         m_inf, m_sup = heuri!(inst, mode)
